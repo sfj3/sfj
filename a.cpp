@@ -3,65 +3,70 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
-#include <sstream>
-#include <iomanip>  // Add this line for setprecision
+#include <iomanip>
 
 class WaveGrub {
 private:
     std::vector<double> t;
-    std::vector<double> wave1;
-    std::vector<double> wave2;
-    double amp1, freq1, phase1;
-    double amp2, freq2, phase2;
+    std::vector<double> wave;
+    std::vector<double> ref_wave;
+    double amp, freq, phase;
     static const int SIZE = 256;
 
 public:
     WaveGrub() : 
-        t(SIZE), wave1(SIZE), wave2(SIZE),
-        amp1(1), freq1(1), phase1(0),
-        amp2(1), freq2(1), phase2(0) {
+        t(SIZE), wave(SIZE), ref_wave(SIZE),
+        amp(1), freq(1), phase(0) {
         for (int i = 0; i < SIZE; ++i) {
             t[i] = 2 * M_PI * i / SIZE;
+            ref_wave[i] = std::sin(t[i]);  // Reference wave is a simple sine wave
         }
-        update_waves();
+        update_wave();
     }
 
-    void update_waves() {
+    void update_wave() {
         for (int i = 0; i < SIZE; ++i) {
-            wave1[i] = amp1 * std::sin(freq1 * t[i] + phase1);
-            wave2[i] = amp2 * std::cos(freq2 * t[i] + phase2);
+            wave[i] = amp * std::sin(freq * t[i] + phase);
         }
     }
 
     void interpret(const std::string& code) {
         for (char cmd : code) {
             switch (cmd) {
-                case 'A': amp1 = std::min(amp1 + 0.1, 2.0); break;
-                case 'B': amp2 = std::min(amp2 + 0.1, 2.0); break;
-                case 'F': freq1 = std::min(freq1 + 0.5, 10.0); break;
-                case 'G': freq2 = std::min(freq2 + 0.5, 10.0); break;
-                case 'P': phase1 = std::fmod(phase1 + 0.2, 2 * M_PI); break;
-                case 'Q': phase2 = std::fmod(phase2 + 0.2, 2 * M_PI); break;
+                case 'A': amp = std::min(amp + 0.1, 2.0); break;
+                case 'F': freq = std::min(freq + 0.5, 10.0); break;
+                case 'P': phase = std::fmod(phase + 0.2, 2 * M_PI); break;
                 case '*':
-                    for (int j = 0; j < SIZE; ++j) wave1[j] *= wave2[j];
+                    for (int j = 0; j < SIZE; ++j) wave[j] *= ref_wave[j];
                     break;
                 case '+':
-                    for (int j = 0; j < SIZE; ++j) wave1[j] += wave2[j];
+                    for (int j = 0; j < SIZE; ++j) wave[j] += ref_wave[j];
                     break;
                 case '=':
                     print_waves();
                     break;
+                case 'R':
+                    reset_wave();
+                    break;
             }
+            update_wave();
         }
     }
 
+    void reset_wave() {
+        amp = 1;
+        freq = 1;
+        phase = 0;
+    }
+
     void print_waves() {
-        std::cout << "Wave1: ";
+        std::cout << "Current wave parameters: Amp = " << amp << ", Freq = " << freq << ", Phase = " << phase << std::endl;
+        std::cout << "Wave:    ";
         for (int i = 0; i < SIZE; i += SIZE/8) 
-            std::cout << std::fixed << std::setprecision(2) << wave1[i] << " ";
-        std::cout << "\nWave2: ";
+            std::cout << std::fixed << std::setprecision(2) << wave[i] << " ";
+        std::cout << "\nRef Wave:";
         for (int i = 0; i < SIZE; i += SIZE/8) 
-            std::cout << std::fixed << std::setprecision(2) << wave2[i] << " ";
+            std::cout << std::fixed << std::setprecision(2) << ref_wave[i] << " ";
         std::cout << std::endl;
     }
 };
@@ -71,9 +76,9 @@ int main() {
     std::string input;
 
     std::cout << "Welcome to a Interactive Interpreter!" << std::endl;
-    std::cout << "Commands: A (increase amp1), B (increase amp2), F (increase freq1), G (increase freq2)" << std::endl;
-    std::cout << "          P (increase phase1), Q (increase phase2), * (multiply waves), + (add waves)" << std::endl;
-    std::cout << "          = (print waves)" << std::endl;
+    std::cout << "Commands: A (increase amplitude), F (increase frequency), P (increase phase)" << std::endl;
+    std::cout << "          * (multiply with reference wave), + (add reference wave)" << std::endl;
+    std::cout << "          = (print waves), R (reset wave to initial state)" << std::endl;
     std::cout << "Enter commands (or 'quit' to exit):" << std::endl;
 
     while (true) {
@@ -87,6 +92,6 @@ int main() {
         wg.interpret(input);
     }
 
-    std::cout << "Thank you for using a!" << std::endl;
+    std::cout << "Thank you for using WaveGrub!" << std::endl;
     return 0;
 }
