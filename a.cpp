@@ -1,4 +1,3 @@
- clang++ -std=c++11 -stdlib=libc++ a.cpp -o a
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -79,9 +78,24 @@ public:
 
 int main() {
     WaveGrub wg;
-    std::string hello_world = "AABBFFGGPPQQ>>>*>>>+>>>fgpq>>>->>>";
-    wg.interpret(hello_world);
+    
+    std::cout << "Initial state:" << std::endl;
     wg.print_waves();
+    
+    std::cout << "\nAfter AABBFFGGPPQQ>>>:" << std::endl;
+    wg.interpret("AABBFFGGPPQQ>>>");
+    wg.print_waves();
+    
+    WaveGrub wg_multiply = wg;
+    WaveGrub wg_add = wg;
+    
+    std::cout << "\nAfter multiplication (*):" << std::endl;
+    wg_multiply.interpret("*");
+    wg_multiply.print_waves();
+    
+    std::cout << "\nAfter addition (+):" << std::endl;
+    wg_add.interpret("+");
+    wg_add.print_waves();
+    
     return 0;
 }
-
