@@ -2,113 +2,123 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
-#include <limits>
+#include <string>
+#include <iomanip>
+#include <random>
+#include <chrono>
 
 class WaveGrub {
 private:
-    static const int SIZE = 256;
     std::vector<double> t;
-    std::vector<double> wave1;
-    std::vector<double> wave2;
-    double amp1, freq1, phase1;
-    double amp2, freq2, phase2;
+    std::vector<double> wave;
+    std::vector<double> target_wave;
+    double amp, freq, phase;
+    static const int SIZE = 256;
 
 public:
     WaveGrub() : 
-        t(SIZE), wave1(SIZE), wave2(SIZE),
-        amp1(1), freq1(1), phase1(0),
-        amp2(1), freq2(1), phase2(0) {
+        t(SIZE), wave(SIZE), target_wave(SIZE),
+        amp(1), freq(1), phase(0) {
         for (int i = 0; i < SIZE; ++i) {
             t[i] = 2 * M_PI * i / SIZE;
         }
-        update_waves();
+        generate_target_wave();
+        update_wave();
     }
 
-    void update_waves() {
+    void generate_target_wave() {
+        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+        std::default_random_engine generator(seed);
+        std::uniform_real_distribution<double> dist(0.5, 1.5);
+        
+        double target_amp = dist(generator);
+        double target_freq = dist(generator);
+        double target_phase = dist(generator) * M_PI;
+
         for (int i = 0; i < SIZE; ++i) {
-            wave1[i] = amp1 * std::sin(freq1 * t[i] + phase1);
-            wave2[i] = amp2 * std::cos(freq2 * t[i] + phase2);
+            target_wave[i] = target_amp * std::sin(target_freq * t[i] + target_phase);
+        }
+    }
+
+    void update_wave() {
+        for (int i = 0; i < SIZE; ++i) {
+            wave[i] = amp * std::sin(freq * t[i] + phase);
         }
     }
 
     void interpret(const std::string& code) {
         for (char cmd : code) {
             switch (cmd) {
-                case 'A': amp1 = std::min(amp1 + 0.1, 2.0); break;
-                case 'B': amp2 = std::min(amp2 + 0.1, 2.0); break;
-                case 'F': freq1 = std::min(freq1 + 0.5, 10.0); break;
-                case 'G': freq2 = std::min(freq2 + 0.5, 10.0); break;
-                case 'P': phase1 = std::fmod(phase1 + 0.2, 2 * M_PI); break;
-                case 'Q': phase2 = std::fmod(phase2 + 0.2, 2 * M_PI); break;
-                case '*':
-                    for (int j = 0; j < SIZE; ++j) wave1[j] *= wave2[j];
-                    break;
-                case '+':
-                    for (int j = 0; j < SIZE; ++j) wave1[j] += wave2[j];
-                    break;
+                case 'A': amp = std::min(amp + 0.1, 2.0); break;
+                case 'a': amp = std::max(amp - 0.1, 0.1); break;
+                case 'F': freq = std::min(freq + 0.1, 2.0); break;
+                case 'f': freq = std::max(freq - 0.1, 0.1); break;
+                case 'P': phase = std::fmod(phase + 0.1, 2 * M_PI); break;
+                case 'p': phase = std::fmod(phase - 0.1 + 2 * M_PI, 2 * M_PI); break;
+                case '=': print_waves(); break;
+                case 'R': reset_wave(); break;
+                case 'C': std::cout << "Current error: " << calculate_error() << std::endl; break;
             }
+            update_wave();
         }
-        update_waves();
     }
 
-    int find_best_match() {
-        double best_match = std::numeric_limits<double>::lowest();
-        int best_index = -1;
-        std::vector<double> original_wave1 = wave1;  // Save original wave1
+    void reset_wave() {
+        amp = 1;
+        freq = 1;
+        phase = 0;
+    }
 
+    double calculate_error() {
+        double error = 0;
         for (int i = 0; i < SIZE; ++i) {
-            double sum = 0;
-            for (int j = 0; j < SIZE; ++j) {
-                sum += wave1[j] * wave2[j];  // Cross-correlation
-            }
-            if (sum > best_match) {
-                best_match = sum;
-                best_index = i;
-            }
-            // Rotate wave1
-            std::rotate(wave1.begin(), wave1.begin() + 1, wave1.end());
+            error += std::pow(wave[i] - target_wave[i], 2);
         }
-
-        wave1 = original_wave1;  // Restore original wave1
-        return best_index;
+        return std::sqrt(error / SIZE);
     }
 
     void print_waves() {
-        std::cout << "Wave1: ";
+        std::cout << "Current wave parameters: Amp = " << amp << ", Freq = " << freq << ", Phase = " << phase << std::endl;
+        std::cout << "Wave:        ";
         for (int i = 0; i < SIZE; i += SIZE/8) 
-            std::cout << wave1[i] << " ";
-        std::cout << "\nWave2: ";
+            std::cout << std::fixed << std::setprecision(2) << wave[i] << " ";
+        std::cout << "\nTarget Wave: ";
         for (int i = 0; i < SIZE; i += SIZE/8) 
-            std::cout << wave2[i] << " ";
-        std::cout << std::endl;
+            std::cout << std::fixed << std::setprecision(2) << target_wave[i] << " ";
+        std::cout << "\nCurrent error: " << calculate_error() << std::endl;
     }
 };
 
 int main() {
     WaveGrub wg;
+    std::string input;
 
-    // Modify wave1
-    wg.interpret("AAFFPP");
+    std::cout << "Welcome to WaveGrub Wave Matching Game!" << std::endl;
+    std::cout << "Try to match the target wave by adjusting the parameters." << std::endl;
+    std::cout << "Commands: A/a (increase/decrease amplitude)" << std::endl;
+    std::cout << "          F/f (increase/decrease frequency)" << std::endl;
+    std::cout << "          P/p (increase/decrease phase)" << std::endl;
+    std::cout << "          = (print waves), R (reset wave), C (check current error)" << std::endl;
+    std::cout << "Enter commands (or 'quit' to exit):" << std::endl;
 
-    // Modify wave2
-    wg.interpret("BBGGQQ");
-
-    std::cout << "Initial waves:" << std::endl;
     wg.print_waves();
 
-    // Find best match
-    int best_index = wg.find_best_match();
-    std::cout << "Best match found at index: " << best_index << std::endl;
+    while (true) {
+        std::cout << "> ";
+        std::getline(std::cin, input);
+        
+        if (input == "quit") {
+            break;
+        }
 
-    // Perform some operations
-    wg.interpret("*+");
+        wg.interpret(input);
 
-    std::cout << "Waves after operations:" << std::endl;
-    wg.print_waves();
+        if (wg.calculate_error() < 0.1) {
+            std::cout << "Congratulations! You've matched the wave!" << std::endl;
+            break;
+        }
+    }
 
-    // Find best match again
-    best_index = wg.find_best_match();
-    std::cout << "Best match found at index: " << best_index << std::endl;
-
+    std::cout << "Thank you for playing WaveGrub Wave Matching Game!" << std::endl;
     return 0;
 }
