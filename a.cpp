@@ -3,6 +3,8 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <sstream>
+#include <iomanip>  // Add this line for setprecision
 
 class WaveGrub {
 private:
@@ -32,36 +34,22 @@ public:
     }
 
     void interpret(const std::string& code) {
-        for (size_t i = 0; i < code.length(); ++i) {
-            char cmd = code[i];
+        for (char cmd : code) {
             switch (cmd) {
                 case 'A': amp1 = std::min(amp1 + 0.1, 2.0); break;
-                case 'a': amp1 = std::max(amp1 - 0.1, 0.0); break;
                 case 'B': amp2 = std::min(amp2 + 0.1, 2.0); break;
-                case 'b': amp2 = std::max(amp2 - 0.1, 0.0); break;
                 case 'F': freq1 = std::min(freq1 + 0.5, 10.0); break;
-                case 'f': freq1 = std::max(freq1 - 0.5, 0.5); break;
                 case 'G': freq2 = std::min(freq2 + 0.5, 10.0); break;
-                case 'g': freq2 = std::max(freq2 - 0.5, 0.5); break;
                 case 'P': phase1 = std::fmod(phase1 + 0.2, 2 * M_PI); break;
-                case 'p': phase1 = std::fmod(phase1 - 0.2 + 2 * M_PI, 2 * M_PI); break;
                 case 'Q': phase2 = std::fmod(phase2 + 0.2, 2 * M_PI); break;
-                case 'q': phase2 = std::fmod(phase2 - 0.2 + 2 * M_PI, 2 * M_PI); break;
                 case '*':
                     for (int j = 0; j < SIZE; ++j) wave1[j] *= wave2[j];
                     break;
                 case '+':
                     for (int j = 0; j < SIZE; ++j) wave1[j] += wave2[j];
                     break;
-                case '-':
-                    for (int j = 0; j < SIZE; ++j) wave1[j] -= wave2[j];
-                    break;
-                case '.':
-                    std::cout << "Wave1: A=" << amp1 << " F=" << freq1 << " P=" << phase1 << std::endl;
-                    std::cout << "Wave2: A=" << amp2 << " F=" << freq2 << " P=" << phase2 << std::endl;
-                    break;
-                case '>':
-                    update_waves();
+                case '=':
+                    print_waves();
                     break;
             }
         }
@@ -69,33 +57,36 @@ public:
 
     void print_waves() {
         std::cout << "Wave1: ";
-        for (int i = 0; i < SIZE; i += SIZE/16) std::cout << wave1[i] << " ";
+        for (int i = 0; i < SIZE; i += SIZE/8) 
+            std::cout << std::fixed << std::setprecision(2) << wave1[i] << " ";
         std::cout << "\nWave2: ";
-        for (int i = 0; i < SIZE; i += SIZE/16) std::cout << wave2[i] << " ";
+        for (int i = 0; i < SIZE; i += SIZE/8) 
+            std::cout << std::fixed << std::setprecision(2) << wave2[i] << " ";
         std::cout << std::endl;
     }
 };
 
 int main() {
     WaveGrub wg;
-    
-    std::cout << "Initial state:" << std::endl;
-    wg.print_waves();
-    
-    std::cout << "\nAfter AABBFFGGPPQQ>>>:" << std::endl;
-    wg.interpret("AABBFFGGPPQQ>>>");
-    wg.print_waves();
-    
-    WaveGrub wg_multiply = wg;
-    WaveGrub wg_add = wg;
-    
-    std::cout << "\nAfter multiplication (*):" << std::endl;
-    wg_multiply.interpret("*");
-    wg_multiply.print_waves();
-    
-    std::cout << "\nAfter addition (+):" << std::endl;
-    wg_add.interpret("+");
-    wg_add.print_waves();
-    
+    std::string input;
+
+    std::cout << "Welcome to a Interactive Interpreter!" << std::endl;
+    std::cout << "Commands: A (increase amp1), B (increase amp2), F (increase freq1), G (increase freq2)" << std::endl;
+    std::cout << "          P (increase phase1), Q (increase phase2), * (multiply waves), + (add waves)" << std::endl;
+    std::cout << "          = (print waves)" << std::endl;
+    std::cout << "Enter commands (or 'quit' to exit):" << std::endl;
+
+    while (true) {
+        std::cout << "> ";
+        std::getline(std::cin, input);
+        
+        if (input == "quit") {
+            break;
+        }
+
+        wg.interpret(input);
+    }
+
+    std::cout << "Thank you for using a!" << std::endl;
     return 0;
 }
