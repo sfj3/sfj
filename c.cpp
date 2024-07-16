@@ -4,7 +4,8 @@
 #include <algorithm>
 #include <string>
 #include <iomanip>
-
+#include <random>
+#include <chrono>
 class WaveGrub {
 private:
     std::vector<double> t;
@@ -12,11 +13,14 @@ private:
     std::vector<double> ref_wave;
     double amp, freq, phase;
     static const int SIZE = 256;
+    std::default_random_engine generator;
 
 public:
     WaveGrub() : 
         t(SIZE), wave(SIZE), ref_wave(SIZE),
         amp(1), freq(1), phase(0) {
+        unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+        generator = std::default_random_engine(seed);
         for (int i = 0; i < SIZE; ++i) {
             t[i] = 2 * M_PI * i / SIZE;
             ref_wave[i] = std::sin(t[i]);  // Reference wave is a simple sine wave
@@ -28,6 +32,20 @@ public:
         for (int i = 0; i < SIZE; ++i) {
             wave[i] = amp * std::sin(freq * t[i] + phase);
         }
+    }
+
+    void random_wave() {
+        std::uniform_real_distribution<double> amp_dist(0.1, 2.0);
+        std::uniform_real_distribution<double> freq_dist(0.5, 10.0);
+        std::uniform_real_distribution<double> phase_dist(0, 2 * M_PI);
+
+        amp = amp_dist(generator);
+        freq = freq_dist(generator);
+        phase = phase_dist(generator);
+
+        update_wave();
+        std::cout << "Generated random wave with:" << std::endl;
+        std::cout << "Amp = " << amp << ", Freq = " << freq << ", Phase = " << phase << std::endl;
     }
 
     void interpret(const std::string& code) {
@@ -62,6 +80,9 @@ public:
                     break;
                 case 'R':
                     reset_wave();
+                    break;
+                case 'N':
+                    random_wave();
                     break;
             }
             update_wave();
@@ -109,6 +130,7 @@ int main() {
     std::cout << "  I (inverse wave)" << std::endl;
     std::cout << "  = (print waves)" << std::endl;
     std::cout << "  R (reset wave to initial state)" << std::endl;
+    std::cout << "  N (generate a new random wave)" << std::endl;
     std::cout << "Enter commands (or 'quit' to exit):" << std::endl;
 
     while (true) {
